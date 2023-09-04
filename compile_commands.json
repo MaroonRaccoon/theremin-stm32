@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/mapa/projects/stm32/build",
+  "command": "/bin/arm-none-eabi-gcc  -I/home/mapa/projects/stm32/include -c -O0 -mcpu=cortex-m4 -mthumb -Wall -fmessage-length=0 -o CMakeFiles/woof.dir/src/startup.S.obj -c /home/mapa/projects/stm32/src/startup.S",
+  "file": "/home/mapa/projects/stm32/src/startup.S"
+},
+{
+  "directory": "/home/mapa/projects/stm32/build",
+  "command": "/bin/arm-none-eabi-gcc  -I/home/mapa/projects/stm32/include -c -O0 -mcpu=cortex-m4 -mthumb -Wall -fmessage-length=0 -o CMakeFiles/woof.dir/src/vector_table.S.obj -c /home/mapa/projects/stm32/src/vector_table.S",
+  "file": "/home/mapa/projects/stm32/src/vector_table.S"
+}
+]
