@@ -6,10 +6,10 @@ set(CMAKE_SYSTEM_PROCESSOR arm)
 set(CMAKE_CROSSCOMPILING 1)
 
 # toolchain
-set(CMAKE_CXX_COMPILER "${TOOLCHAIN}/bin/arm-none-eabi-g++")
-set(CMAKE_AS_COMPILER "${TOOLCHAIN}/bin/arm-none-eabi-g++")
-set(CMAKE_OBJCOPY "${TOOLCHAIN}/bin/arm-none-eabi-objcopy")
-set(CMAKE_SIZE_UTIL "${TOOLCHAIN}/bin/arm-none-eabi-size")
+set(CMAKE_CXX_COMPILER "$ENV{GCC_TOOLCHAIN_DIR}/bin/arm-none-eabi-g++")
+set(CMAKE_AS_COMPILER "$ENV{GCC_TOOLCHAIN_DIR}/bin/arm-none-eabi-g++")
+set(CMAKE_OBJCOPY "$ENV{GCC_TOOLCHAIN_DIR}/bin/arm-none-eabi-objcopy")
+set(CMAKE_SIZE_UTIL "$ENV{GCC_TOOLCHAIN_DIR}/bin/arm-none-eabi-size")
 
 # compile/asm/link flags
 set(LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/stm32f401re.ld")
