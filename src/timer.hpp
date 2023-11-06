@@ -71,16 +71,14 @@ enum class CaptureCompareInputPolarity
 
 struct BasicInputCaptureSettings
 {
-    ClockDivision         clockDivision;
-    bool                  interruptEnable;
-    InputCaptureFilter    filter;
-    InputCapturePrescaler prescaler;
+    ClockDivision               clockDivision;
+    bool                        interruptEnable;
+    InputCaptureFilter          filter;
+    InputCapturePrescaler       prescaler;
     CaptureCompareInputPolarity polarity;
 };
 
-
 } // namespace timer
-
 
 class BasicInputCaptureTimer
 {
@@ -94,20 +92,24 @@ class BasicInputCaptureTimer
     uint32_t read_us();
 
   private:
-    static constexpr uint32_t           get_bus_enable_mask( timer::Id timer_id );
-    static constexpr volatile uint32_t &get_bus_enable_register( timer::Id timer_id );
-    static void                         enable_bus_clock( timer::Id timer_id );
-    static constexpr uint32_t           get_ccmr_ic1f_mask( timer::InputCaptureFilter filter );
-    static constexpr uint32_t           get_ccmr_ic1psc_mask( timer::InputCapturePrescaler prescaler );
-    static constexpr uint32_t get_ccer_input_polarity_mask( timer::CaptureCompareInputPolarity polarity );
-
     TIM_TypeDef *tim;
 };
 
 class DelayTimer
 {
   public:
-    DelayTimer();
-    void ms( std::uint32_t ms );
-    void us( std::uint32_t us );
+    DelayTimer( timer::Id );
+    void us( std::uint16_t us );
+    void ms( std::uint16_t ms );
+
+  private:
+    TIM_TypeDef *tim;
 };
+
+void                         enable_bus_clock( timer::Id timer_id );
+constexpr volatile uint32_t &get_bus_enable_register( timer::Id timer_id );
+constexpr uint32_t           get_bus_enable_mask( timer::Id timer_id );
+constexpr uint32_t           get_ccmr_ic1f_mask( timer::InputCaptureFilter filter );
+constexpr uint32_t           get_ccmr_ic1psc_mask( timer::InputCapturePrescaler prescaler );
+constexpr uint32_t           get_ccer_input_polarity_mask( timer::CaptureCompareInputPolarity polarity );
+constexpr TIM_TypeDef       *get_timer_base( timer::Id timer_id );

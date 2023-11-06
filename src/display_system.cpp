@@ -1,42 +1,18 @@
-#include "display_system.h"
+#include "display_system.hpp"
 
-#include "i2c_system.h"
-#include "gpio_system.h"
-#include "io_constants.h"
-
-void display_setup_gpio()
-{
-    // enable clock
-    DISPLAY_I2C_RCC |= DISPLAY_I2C_RCC_EN;
-
-    // scl gpio
-    gpio_setup_output(DISPLAY_I2C_SCL_PORT, DISPLAY_I2C_SCL_PIN);
-    gpio_set_pupdr(DISPLAY_I2C_SCL_PORT, DISPLAY_I2C_SCL_PIN, PUPDR_UP);
-    gpio_set_mode_af(DISPLAY_I2C_SCL_PORT, DISPLAY_I2C_SCL_PIN);
-
-    // sda gpio
-    gpio_setup_output(DISPLAY_I2C_SDA_PORT, DISPLAY_I2C_SDA_PIN);
-    gpio_set_pupdr(DISPLAY_I2C_SDA_PORT, DISPLAY_I2C_SDA_PIN, PUPDR_UP);
-    gpio_set_mode_af(DISPLAY_I2C_SDA_PORT, DISPLAY_I2C_SDA_PIN);
-
-    // scl af
-    uint32_t display_i2c_scl_afr_shift = DISPLAY_I2C_SCL_PIN * 4U;
-    DISPLAY_I2C_SCL_PORT->AFR[DISPLAY_I2C_SCL_AFR_IX] &= ~(0xFU << display_i2c_scl_afr_shift);
-    DISPLAY_I2C_SCL_PORT->AFR[DISPLAY_I2C_SCL_AFR_IX] |= ~(DISPLAY_I2C_SCL_AFR_VAL << display_i2c_scl_afr_shift);
-
-    // sda af
-    uint32_t display_i2c_sda_afr_shift = DISPLAY_I2C_SDA_PIN * 4U;
-    DISPLAY_I2C_SDA_PORT->AFR[DISPLAY_I2C_SDA_AFR_IX] &= ~(0xFU << display_i2c_sda_afr_shift);
-    DISPLAY_I2C_SDA_PORT->AFR[DISPLAY_I2C_SDA_AFR_IX] |= ~(DISPLAY_I2C_SDA_AFR_VAL << display_i2c_sda_afr_shift);
+Display::Display( I2CMaster &i2c, unsigned char address ) : i2c( i2c )
+{ 
+    i2c.start_write( address );
+    // TODO: delay?
+    set_to_4_bit_mode();
 }
 
-void display_setup()
+Display::~Display()
 {
-    display_setup_gpio();
-    i2c_setup(DISPLAY_I2C);
+    i2c.stop_write();
 }
 
-void display_start()
+void Display::set_to_4_bit_mode()
 {
-    i2c_start_tx(DISPLAY_I2C, 0x37);
+    i2c.write(INSTR_FUN_SET_4BIT);
 }

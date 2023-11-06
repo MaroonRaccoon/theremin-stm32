@@ -18,8 +18,13 @@ void I2CButtonSystem::tick()
         }
         delay( 50000 );
 
+        unsigned char packet = 0;
+
+        // disable RW bit
+        packet &= ~0x2;
+
         i2c.start_write( 0x3f );
-        i2c.write( 0xff ^ 0x00 );
+        i2c.write( 0x1 << 7UL );
         i2c.stop_write();
     }
 }

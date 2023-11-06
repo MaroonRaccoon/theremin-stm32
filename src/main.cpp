@@ -1,5 +1,5 @@
-#include "main.h"
-
+#include "display_system.hpp"
+#include "display_test_system.hpp"
 #include "i2c.hpp"
 #include "i2c_button_system.hpp"
 #include "io_constants.hpp"
@@ -8,6 +8,7 @@
 #include "ultrasonic.hpp"
 #include "ultrasonic_button_system.hpp"
 #include "util.h"
+#include "timer_test_system.hpp"
 
 #include "interrupts.hpp"
 
@@ -26,11 +27,15 @@ const auto ultrasonic_echo_port = gpio::Port::B;
 const auto ultrasonic_echo_pin  = 8;
 
 const auto periph_ultrasonic_timer = timer::Id::Tim10;
+const auto periph_delay_timer      = timer::Id::Tim10;
 
 const auto periph_display_i2c  = i2c::ID::I2C_1;
 const auto display_i2c_port    = gpio::Port::B;
 const auto display_i2c_scl_pin = 6;
 const auto display_i2c_sda_pin = 7;
+
+const auto timer_test_port = gpio::Port::C;
+const auto timer_test_pin = 8;
 
 // TOOD: make a mutex using the synchronization instructions (LDREXW, LDREXH, etc) from programmer's manual
 // TODO: check privilege stuff for interrupts
@@ -101,6 +106,16 @@ int main( void )
         },
         AFR_VAL_I2C
     );
+    GPIO pin_timer_test_out(
+        {
+            .port = timer_test_port,
+            .pin = timer_test_pin,
+            .mode = gpio::Mode::Output,
+            .outputType = gpio::OutputType::PushPull,
+            .speed = gpio::Speed::Low,
+            .pull = gpio::Pull::None,
+        }
+    );
 
     BasicInputCaptureTimer timer_ultrasonic_range(
         periph_ultrasonic_timer,
@@ -112,9 +127,10 @@ int main( void )
             .polarity        = timer::CaptureCompareInputPolarity::BothEdges 
         }
     );
+    DelayTimer timer_delay(periph_delay_timer);
 
     LED led( pin_ultrasonic_led );
-    Ultrasonic ultrasonic( pin_ultrasonic_trigger, pin_ultrasonic_echo, timer_ultrasonic_range );
+    Ultrasonic ultrasonic( pin_ultrasonic_trigger, pin_ultrasonic_echo, timer_ultrasonic_range, timer_delay );
     UltrasonicButtonSystem ultrasonic_button_system( ultrasonic, button_ultrasonic_trigger, led );
 
     I2CMaster display_i2c(
@@ -126,15 +142,19 @@ int main( void )
             .master_mode = i2c::MasterMode::Slow,
         }
     );
-    I2CButtonSystem i2c_button_system( display_i2c, button_ultrasonic_trigger, led );
+    Display display(
+        display_i2c,
+        0x3f
+    );
     // clang-format on
+
+    DisplayTestSystem display_test(display, button_ultrasonic_trigger, timer_delay);
 
     InterruptHandlers interrupt_handlers{ .tim1_up_tim10_handler = ultrasonic };
     g_interrupt_handlers = &interrupt_handlers;
 
     while ( 1 ) {
-        //ultrasonic_button_system.tick();
-        i2c_button_system.tick();
+        display_test.tick();
     }
 
     return 0;

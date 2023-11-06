@@ -1,8 +1,8 @@
 #include "ultrasonic.hpp"
 #include "util.h"
 
-Ultrasonic::Ultrasonic( GPIO &trigger, GPIO &echo, BasicInputCaptureTimer &timer )
-    : trigger( trigger ), echo( echo ), timer( timer ), status( Status::Idle )
+Ultrasonic::Ultrasonic( GPIO &trigger, GPIO &echo, BasicInputCaptureTimer &timer, DelayTimer &delay )
+    : trigger( trigger ), echo( echo ), timer( timer ), delay(delay), status( Status::Idle )
 {
     trigger.unset();
 }
@@ -14,7 +14,7 @@ uint32_t Ultrasonic::measure_range_mm()
 
     status = Status::WaitingForEcho;
     trigger.set();
-    delay( 100000 );
+    delay.us( 10 );
     trigger.unset();
 
     // while we're waiting here, the ultrasonic sensor should send a pulse through the echo line

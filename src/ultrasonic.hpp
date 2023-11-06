@@ -7,7 +7,7 @@
 class Ultrasonic
 {
   public:
-    Ultrasonic( GPIO &trigger, GPIO &echo, BasicInputCaptureTimer &timer );
+    Ultrasonic( GPIO &trigger, GPIO &echo, BasicInputCaptureTimer &timer, DelayTimer &delay );
 
     uint32_t measure_range_mm();
 
@@ -25,6 +25,7 @@ class Ultrasonic
     GPIO                   &trigger;
     GPIO                   &echo;
     BasicInputCaptureTimer &timer;
+    DelayTimer             &delay;
 
     volatile Status   status;
     volatile uint32_t distance_mm;
