@@ -1,18 +1,25 @@
-#include "display_system.hpp"
-#include "display_test_system.hpp"
-#include "i2c.hpp"
-#include "i2c_button_system.hpp"
 #include "io_constants.hpp"
-#include "led.hpp"
-#include "timer.hpp"
-#include "ultrasonic.hpp"
 #include "ultrasonic_button_system.hpp"
+#include "spi.hpp"
+#include "dac.hpp"
 #include "util.h"
-#include "timer_test_system.hpp"
 
 #include "interrupts.hpp"
 
 InterruptHandlers *g_interrupt_handlers = nullptr;
+
+// SPI2
+const auto dac_spi_nss_port    = gpio::Port::B;
+const auto dac_spi_nss_pin     = 12;
+const auto dac_spi_nss_afr_val = 5u;
+
+const auto dac_spi_sck_port    = gpio::Port::B;
+const auto dac_spi_sck_pin     = 13;
+const auto dac_spi_sck_afr_val = 5u;
+
+const auto dac_spi_mosi_port    = gpio::Port::B;
+const auto dac_spi_mosi_pin     = 15;
+const auto dac_spi_mosi_afr_val = 5u;
 
 const auto ultrasonic_led_port = gpio::Port::A;
 const auto ultrasonic_led_pin  = 5;
@@ -27,15 +34,7 @@ const auto ultrasonic_echo_port = gpio::Port::B;
 const auto ultrasonic_echo_pin  = 8;
 
 const auto periph_ultrasonic_timer = timer::Id::Tim10;
-const auto periph_delay_timer      = timer::Id::Tim10;
-
-const auto periph_display_i2c  = i2c::ID::I2C_1;
-const auto display_i2c_port    = gpio::Port::B;
-const auto display_i2c_scl_pin = 6;
-const auto display_i2c_sda_pin = 7;
-
-const auto timer_test_port = gpio::Port::C;
-const auto timer_test_pin = 8;
+const auto periph_delay_timer      = timer::Id::Tim11;
 
 // TOOD: make a mutex using the synchronization instructions (LDREXW, LDREXH, etc) from programmer's manual
 // TODO: check privilege stuff for interrupts
@@ -43,32 +42,14 @@ const auto timer_test_pin = 8;
 int main( void )
 {
     // clang-format off
+
+    // ultrasonic pins
     GPIO pin_ultrasonic_trigger(
         { 
             .port       = ultrasonic_trigger_port,
             .pin        = ultrasonic_trigger_pin,
             .mode       = gpio::Mode::Output,
             .outputType = gpio::OutputType::PushPull,
-            .speed      = gpio::Speed::Low,
-            .pull       = gpio::Pull::Down,
-        }
-    );
-    GPIO pin_ultrasonic_led(
-        { 
-            .port       = ultrasonic_led_port,
-            .pin        = ultrasonic_led_pin,
-            .mode       = gpio::Mode::Output,
-            .outputType = gpio::OutputType::PushPull,
-            .speed      = gpio::Speed::Low,
-            .pull       = gpio::Pull::Down,
-        }
-    );
-    GPIO button_ultrasonic_trigger(
-        { 
-            .port       = ultrasonic_trigger_button_port,
-            .pin        = ultrasonic_trigger_button_pin,
-            .mode       = gpio::Mode::Input,
-            .outputType = gpio::OutputType::OpenDrain,
             .speed      = gpio::Speed::Low,
             .pull       = gpio::Pull::Down,
         }
@@ -84,37 +65,60 @@ int main( void )
         },
         ULT_ECHO_AFR_VAL
     );
-    GPIO pin_display_i2c_scl(
+
+    // ultrasonic control/display
+    GPIO button_ultrasonic_trigger(
         { 
-            .port       = display_i2c_port,
-            .pin        = display_i2c_scl_pin,
-            .mode       = gpio::Mode::AlternateFunction,
+            .port       = ultrasonic_trigger_button_port,
+            .pin        = ultrasonic_trigger_button_pin,
+            .mode       = gpio::Mode::Input,
             .outputType = gpio::OutputType::OpenDrain,
             .speed      = gpio::Speed::Low,
-            .pull       = gpio::Pull::Up,
-        },
-        AFR_VAL_I2C
-    );
-    GPIO pin_display_i2c_sda(
-        { 
-            .port       = display_i2c_port,
-            .pin        = display_i2c_sda_pin,
-            .mode       = gpio::Mode::AlternateFunction,
-            .outputType = gpio::OutputType::OpenDrain,
-            .speed      = gpio::Speed::Low,
-            .pull       = gpio::Pull::Up,
-        },
-        AFR_VAL_I2C
-    );
-    GPIO pin_timer_test_out(
-        {
-            .port = timer_test_port,
-            .pin = timer_test_pin,
-            .mode = gpio::Mode::Output,
-            .outputType = gpio::OutputType::PushPull,
-            .speed = gpio::Speed::Low,
-            .pull = gpio::Pull::None,
+            .pull       = gpio::Pull::Down,
         }
+    );
+    GPIO pin_ultrasonic_led(
+        { 
+            .port       = ultrasonic_led_port,
+            .pin        = ultrasonic_led_pin,
+            .mode       = gpio::Mode::Output,
+            .outputType = gpio::OutputType::PushPull,
+            .speed      = gpio::Speed::Low,
+            .pull       = gpio::Pull::Down, // TODO: shouldn't this be none?
+        }
+    );
+    GPIO pin_dac_nss(
+        {
+            .port       = dac_spi_nss_port,
+            .pin        = dac_spi_nss_pin,
+            .mode       = gpio::Mode::Output,
+            .outputType = gpio::OutputType::OpenDrain,
+            .speed      = gpio::Speed::Low,
+            .pull       = gpio::Pull::None
+        },
+        dac_spi_nss_afr_val
+    );
+    GPIO pin_dac_sck(
+        {
+            .port       = dac_spi_sck_port,
+            .pin        = dac_spi_sck_pin,
+            .mode       = gpio::Mode::AlternateFunction,
+            .outputType = gpio::OutputType::PushPull,
+            .speed      = gpio::Speed::Low,
+            .pull       = gpio::Pull::None
+        },
+        dac_spi_sck_afr_val
+    );
+    GPIO pin_dac_mosi(
+        {
+            .port       = dac_spi_mosi_port,
+            .pin        = dac_spi_mosi_pin,
+            .mode       = gpio::Mode::AlternateFunction,
+            .outputType = gpio::OutputType::PushPull,
+            .speed      = gpio::Speed::Low,
+            .pull       = gpio::Pull::None
+        },
+        dac_spi_mosi_afr_val
     );
 
     BasicInputCaptureTimer timer_ultrasonic_range(
@@ -131,31 +135,54 @@ int main( void )
 
     LED led( pin_ultrasonic_led );
     Ultrasonic ultrasonic( pin_ultrasonic_trigger, pin_ultrasonic_echo, timer_ultrasonic_range, timer_delay );
-    UltrasonicButtonSystem ultrasonic_button_system( ultrasonic, button_ultrasonic_trigger, led );
 
-    I2CMaster display_i2c(
+    SPIMaster spi_dac(
         {
-            .id = periph_display_i2c,
-            .peripheral_clock_frequency_MHz = 16U,
-            .scl_clock_time_coeff = 76,
-            .max_rise_time_ns = 1000,
-            .master_mode = i2c::MasterMode::Slow,
+            .id = spi::ID::SPI_2,
+            .not_chip_select = pin_dac_nss,
+            .dataFrameFormat = spi::DataFrameFormat::Frame16Bit,
+            .softwareSlaveManagement = false,
+            .dataFrameOrder = spi::DataFrameOrder::MsbFirst,
+            .baudRateControl = 7,
+            .clockPolarity = spi::ClockPolarity::IdleLow,
+            .clockPhase = spi::ClockPhase::SampleFirst,
         }
     );
-    Display display(
-        display_i2c,
-        0x3f
-    );
-    // clang-format on
 
-    DisplayTestSystem display_test(display, button_ultrasonic_trigger, timer_delay);
+    DAC dac(
+        {
+            .spi = spi_dac
+        }
+    );
+
+    // clang-format on
 
     InterruptHandlers interrupt_handlers{ .tim1_up_tim10_handler = ultrasonic };
     g_interrupt_handlers = &interrupt_handlers;
 
+    uint16_t range = 0;
     while ( 1 ) {
-        display_test.tick();
+        range = ultrasonic.measure_range_mm();
+        if (range > 200) range = 200;
+        range *= 20;
+        dac.write(range);
     }
 
     return 0;
 }
+
+/*
+I2CMaster display_i2c(
+    {
+        .id = periph_display_i2c,
+        .peripheral_clock_frequency_MHz = 16U,
+        .scl_clock_time_coeff = 76,
+        .max_rise_time_ns = 1000,
+        .master_mode = i2c::MasterMode::Slow,
+    }
+);
+Display display(
+    display_i2c,
+    0x3f
+);
+*/

@@ -2,7 +2,7 @@
 #include "util.h"
 
 Ultrasonic::Ultrasonic( GPIO &trigger, GPIO &echo, BasicInputCaptureTimer &timer, DelayTimer &delay )
-    : trigger( trigger ), echo( echo ), timer( timer ), delay(delay), status( Status::Idle )
+    : trigger( trigger ), echo( echo ), timer( timer ), delay(delay), status( Status::Idle ), num_interrupts(0)
 {
     trigger.unset();
 }
@@ -29,6 +29,7 @@ uint32_t Ultrasonic::measure_range_mm()
 
 void Ultrasonic::isr_timer()
 {
+    num_interrupts++;
     switch ( status ) {
     case Status::WaitingForEcho: {
         timer.restart();

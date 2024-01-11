@@ -3,7 +3,6 @@
 
 I2CMaster::I2CMaster( i2c::Settings settings )
 {
-    // TOOD: enable clock
     switch(settings.id) {
         case i2c::ID::I2C_1:
             i2c = I2C1;

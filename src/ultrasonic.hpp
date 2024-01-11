@@ -26,6 +26,7 @@ class Ultrasonic
     GPIO                   &echo;
     BasicInputCaptureTimer &timer;
     DelayTimer             &delay;
+    volatile int num_interrupts;
 
     volatile Status   status;
     volatile uint32_t distance_mm;
