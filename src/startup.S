@@ -11,7 +11,6 @@
 reset_handler:
     ldr r0, =_estack
     mov sp, r0
-    ldr r8, =0xB00B1E5
 
     movs r0, #0 // copy counter
     ldr r1, =_sdata

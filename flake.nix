@@ -3,6 +3,12 @@
 
   inputs = {
       nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+      freeRTOS = {
+        type = "github";
+          owner = "FreeRTOS";
+          repo = "FreeRTOS-Kernel";
+          flake = false;
+      };
   };
 
   outputs = inputs:
@@ -49,6 +55,7 @@
           pkgs.pkg-config
         ];
         shellHook = ''
+          export FREERTOS_DIR=${inputs.freeRTOS}
           export GCC_TOOLCHAIN_DIR=${pkgs.gcc-arm-embedded}
           export PYTHON_EXE=${pkgs.python3}
         '';

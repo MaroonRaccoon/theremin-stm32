@@ -1,7 +1,9 @@
-#include "io_constants.hpp"
-#include "ultrasonic_button_system.hpp"
-#include "spi.hpp"
+#include "audio.hpp"
 #include "dac.hpp"
+#include "io_constants.hpp"
+#include "led_system.h"
+#include "spi.hpp"
+#include "ultrasonic_button_system.hpp"
 #include "util.h"
 
 #include "interrupts.hpp"
@@ -28,13 +30,20 @@ const auto ultrasonic_trigger_pin  = 9;
 const auto ultrasonic_echo_port = gpio::Port::B;
 const auto ultrasonic_echo_pin  = 8;
 
-// ---- timers ---- 
+const auto isr_test_port = gpio::Port::C;
+const auto isr_test_pin  = 0;
+
+// ---- timers ----
 const auto periph_ultrasonic_timer = timer::Id::Tim10;
 const auto periph_delay_timer      = timer::Id::Tim11;
 
-
 // TOOD: make a mutex using the synchronization instructions (LDREXW, LDREXH, etc) from programmer's manual
-// TODO: check privilege stuff for interrupts
+
+enum class State
+{
+    Waiting,
+    FillingBuffer
+};
 
 int main( void )
 {
@@ -77,7 +86,7 @@ int main( void )
     );
     Ultrasonic ultrasonic( pin_ultrasonic_trigger, pin_ultrasonic_echo, timer_ultrasonic_range, timer_delay );
 
-    // DAC setup
+    // DAC & audio driver setup
     GPIO pin_dac_nss(
         {
             .port       = dac_spi_nss_port,
@@ -124,6 +133,24 @@ int main( void )
         }
     );
     DAC dac( { .spi = spi_dac } );
+    AudioDriver<128, 256> audio_driver(
+        {
+            .dac = dac,
+            .sample_rate = 20000,
+        }
+    );
+
+    // output for ISR timing test
+    GPIO pin_isr_test(
+        { 
+            .port       = isr_test_port,
+            .pin        = isr_test_pin,
+            .mode       = gpio::Mode::Output,
+            .outputType = gpio::OutputType::PushPull,
+            .speed      = gpio::Speed::Low,
+            .pull       = gpio::Pull::Down,
+        }
+    );
 
     // clang-format on
 
@@ -131,19 +158,39 @@ int main( void )
     InterruptHandlers interrupt_handlers{ .tim1_up_tim10_handler = ultrasonic };
     g_interrupt_handlers = &interrupt_handlers;
 
+    State state = State::Waiting;
+
+    // testing timing for the ISR via logic analyzer
+    while (1) {
+        pin_isr_test.set();
+        audio_driver.isr_write_dac();
+        pin_isr_test.unset();
+        timer_delay.ms(500);
+    }
+
+    /*
     // main loop
     uint16_t range = 0;
     while ( 1 ) {
-        range = ultrasonic.measure_range_mm();
+        switch (state) {
+            case State::Waiting:
+                if (audio_driver.buffer_traversed) state = State::FillingBuffer;
+                break;
+            case State::FillingBuffer:
+                range = ultrasonic.measure_range_mm();
+                // limit to ~200mm measured
+                if ( range > 200 )
+                    range = 200;
 
-        // limit to ~200mm measured
-        if (range > 200) range = 200;
+                // scale to 0 -> 4000 (max is 4095)
+                range *= 20;
+                break;
+        }
 
-        // scale to 0 -> 4000 (max is 4095)
-        range *= 20;
 
-        dac.write(range);
+        dac.write( range );
     }
+    */
 
     return 0;
 }

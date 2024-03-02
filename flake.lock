@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "freeRTOS": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1706122333,
+        "narHash": "sha256-wiUHTHQyzSg43OfrX1PdJUp0fQkwcYnMFsLseoTcjd0=",
+        "owner": "FreeRTOS",
+        "repo": "FreeRTOS-Kernel",
+        "rev": "8e664fc9844e03cc839074aff933fc9b79842d9c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FreeRTOS",
+        "repo": "FreeRTOS-Kernel",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1686960236,
@@ -18,6 +34,7 @@
     },
     "root": {
       "inputs": {
+        "freeRTOS": "freeRTOS",
         "nixpkgs": "nixpkgs"
       }
     }
